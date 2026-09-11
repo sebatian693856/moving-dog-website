@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moving Dog Website</title>
+    <title>Click the Dogs Game</title>
     <style>
         * {
             margin: 0;
@@ -31,6 +31,26 @@
             align-items: center;
         }
 
+        .header {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            color: white;
+            font-size: 2em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+        }
+
+        .score {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .difficulty {
+            font-size: 1em;
+            opacity: 0.9;
+        }
+
         h1 {
             color: white;
             font-size: 3em;
@@ -43,32 +63,25 @@
             position: absolute;
             bottom: 100px;
             font-size: 100px;
-            animation: walk 4s infinite linear;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s;
+        }
+
+        .dog:hover {
+            transform: scale(1.1);
+        }
+
+        .dog:active {
+            transform: scale(0.95);
         }
 
         @keyframes walk {
             0% {
                 left: -100px;
-                transform: scaleX(1);
             }
             100% {
                 left: 100%;
-                transform: scaleX(1);
-            }
-        }
-
-        .tail {
-            position: absolute;
-            display: inline-block;
-            animation: wagTail 0.3s infinite;
-        }
-
-        @keyframes wagTail {
-            0%, 100% {
-                transform: rotate(0deg);
-            }
-            50% {
-                transform: rotate(20deg);
             }
         }
 
@@ -86,48 +99,130 @@
             }
         }
 
-        .info {
+        .popup {
+            position: fixed;
+            pointer-events: none;
+            font-size: 2em;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            animation: floatUp 1s ease-out forwards;
+            z-index: 50;
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100px);
+            }
+        }
+
+        .instructions {
             position: absolute;
-            top: 30px;
+            bottom: 30px;
             color: white;
             font-size: 1.2em;
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🐕 Watch the Dog Run! 🐕</h1>
-        <div class="dog">
-            <span class="legs">🐕</span>
+        <div class="header">
+            <div class="score">Score: <span id="score">0</span></div>
+            <div class="difficulty">Difficulty: <span id="difficulty">1</span></div>
         </div>
+        <h1>🎮 Click the Dogs! 🐕</h1>
+        <div class="instructions">Click on the dogs as they run past to earn points!</div>
     </div>
 
     <script>
-        // Create multiple dogs for extra fun
+        let score = 0;
+        let difficulty = 1;
+        const scoreDisplay = document.getElementById('score');
+        const difficultyDisplay = document.getElementById('difficulty');
         const container = document.querySelector('.container');
-        
+
+        function updateDifficulty() {
+            // Increase difficulty every 5 points
+            const newDifficulty = Math.floor(score / 5) + 1;
+            if (newDifficulty !== difficulty) {
+                difficulty = newDifficulty;
+                difficultyDisplay.textContent = difficulty;
+            }
+        }
+
+        function showPopup(x, y) {
+            const popup = document.createElement('div');
+            popup.className = 'popup';
+            popup.textContent = '+1';
+            popup.style.left = x + 'px';
+            popup.style.top = y + 'px';
+            document.body.appendChild(popup);
+
+            setTimeout(() => {
+                popup.remove();
+            }, 1000);
+        }
+
         function createDog() {
             const dog = document.createElement('div');
             dog.className = 'dog';
             dog.innerHTML = '<span class="legs">🐕</span>';
-            dog.style.bottom = Math.random() * 400 + 50 + 'px';
-            dog.style.animationDuration = (Math.random() * 2 + 3) + 's';
+            
+            const startBottom = Math.random() * 400 + 50;
+            dog.style.bottom = startBottom + 'px';
+            
+            // Faster speed based on difficulty
+            const baseDuration = Math.random() * 2 + 3;
+            const speedMultiplier = 1 - (difficulty * 0.1);
+            const duration = Math.max(baseDuration * speedMultiplier, 1.5);
+            
+            dog.style.animation = `walk ${duration}s linear forwards`;
             dog.style.fontSize = (Math.random() * 40 + 60) + 'px';
             dog.style.opacity = Math.random() * 0.5 + 0.5;
+            
+            let clicked = false;
+            
+            dog.addEventListener('click', (e) => {
+                if (!clicked) {
+                    clicked = true;
+                    score++;
+                    scoreDisplay.textContent = score;
+                    updateDifficulty();
+                    
+                    // Show popup
+                    const rect = dog.getBoundingClientRect();
+                    showPopup(rect.left, rect.top);
+                    
+                    // Add visual feedback
+                    dog.style.opacity = '0.3';
+                    dog.style.pointerEvents = 'none';
+                }
+            });
+            
             container.appendChild(dog);
 
             // Remove dog after animation completes
             setTimeout(() => {
                 dog.remove();
-            }, (Math.random() * 2 + 3) * 1000);
+            }, duration * 1000);
         }
 
-        // Create a new dog every 2 seconds
-        setInterval(createDog, 2000);
+        // Create a new dog every 1.5 seconds, but spawn more frequently as difficulty increases
+        function spawnDog() {
+            createDog();
+            const spawnRate = Math.max(1500 - (difficulty * 200), 600);
+            setTimeout(spawnDog, spawnRate);
+        }
         
-        // Create initial dog
-        createDog();
+        // Start the game
+        spawnDog();
     </script>
 </body>
 </html>
